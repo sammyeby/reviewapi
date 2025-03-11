@@ -382,3 +382,9 @@ Caused by: org.h2.mvstore.MVStoreException: The file is locked: /Users/samuelume
 	at org.h2.mvstore.SingleFileStore.open(SingleFileStore.java:81)
 	at org.h2.mvstore.MVStore.<init>(MVStore.java:286)
 	... 26 more
+2025-03-11 15:57:33.438436+01:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "drop table if exists [*]user cascade "; expected "identifier"; SQL statement:
+drop table if exists user cascade  [42001-224]
+2025-03-11 15:57:33.454922+01:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "create table [*]user (dairy_check boolean, egg_check boolean, peanut_check boolean, id bigint not null, city varchar(255), display_name varchar(255), state varchar(255), zipcode varchar(255), primary key (id))"; expected "identifier"; SQL statement:
+create table user (dairy_check boolean, egg_check boolean, peanut_check boolean, id bigint not null, city varchar(255), display_name varchar(255), state varchar(255), zipcode varchar(255), primary key (id)) [42001-224]

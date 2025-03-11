@@ -2,52 +2,79 @@ package com.samsoft.reviewapi.service;
 
 import com.samsoft.reviewapi.entities.Restaurant;
 import com.samsoft.reviewapi.repository.RestaurantRepository;
-import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class RestaurantService {
+    private final Pattern zipcodePattern = Pattern.compile("\\d{5}");
+    private final RestaurantRepository restaurantRepository;
 
-    @Autowired
-    private RestaurantRepository restaurantRepository;
+    public RestaurantService(RestaurantRepository restaurantRepository) {
+        this.restaurantRepository = restaurantRepository;
+    }
 
     public Iterable<Restaurant> getAllRestaurants() {
         return restaurantRepository.findAll();
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
-        Optional<Restaurant> existingRestaurant = restaurantRepository.findByNameAndZipcode(restaurant.getName(), restaurant.getZipcode());
-        if (existingRestaurant.isPresent()) {
-            throw new RuntimeException("Restaurant with the same name and zipcode already exists");
+        validateRestaurant(restaurant);
+        return restaurantRepository.save(restaurant);
+    }
+
+    public Restaurant getRestaurantById(Long id) {
+        Optional<Restaurant> restaurant = restaurantRepository.findById(id);
+        if (restaurant.isPresent()) {
+            return restaurant.get();
         }
-        return restaurantRepository.save(restaurant);
+
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Restaurant not found");
     }
 
-    public Optional<Restaurant> getRestaurantById(Long id) {
-        return Optional.ofNullable(restaurantRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found")));
+
+    public void updateRestaurant(Restaurant updatedRestaurant) {
+        restaurantRepository.save(updatedRestaurant);
     }
 
-    public Optional<Restaurant> getRestaurantByNameAndZipcode(String name, String zipcode) {
-        return restaurantRepository.findByNameAndZipcode(name, zipcode);
+    public Iterable<Restaurant> searchRestaurants(String zipcode, String allergy) {
+        Iterable<Restaurant> restaurants = Collections.emptyList();
+        if (allergy.equalsIgnoreCase("peanut")) {
+            restaurants = restaurantRepository.findRestaurantsByZipcodeAndPeanutScoreNotNullOrderByPeanutScore(zipcode);
+        } else if (allergy.equalsIgnoreCase("dairy")) {
+            restaurants = restaurantRepository.findRestaurantsByZipcodeAndDairyScoreNotNullOrderByDairyScore(zipcode);
+        } else if (allergy.equalsIgnoreCase("egg")) {
+            restaurants = restaurantRepository.findRestaurantsByZipcodeAndEggScoreNotNullOrderByEggScore(zipcode);
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid allergy");
+        }
+        return restaurants;
     }
 
-    public Restaurant updateRestaurant(Restaurant restaurant) {
-        Restaurant existingRestaurant = restaurantRepository.findById(restaurant.getId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-
-        restaurant.setName(existingRestaurant.getName());
-        restaurant.setZipcode(existingRestaurant.getZipcode());
-        return restaurantRepository.save(restaurant);
+    public void validateZipcode(String zipcode) {
+        if (!zipcodePattern.matcher(zipcode).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid zipcode");
+        }
     }
 
-//    public List<Restaurant> getRestaurantsByAllergiesScores(String zipcode, int eggScore, int dairyScore, int peanutScore, Sort sort) {
-//
-//        return restaurantRepository.findByZipcodeAndAverageEggScoreGreaterThanOrAverageDairyScoreGreaterThanOrAveragePeanutScoreGreaterThan(zipcode, eggScore, dairyScore, peanutScore, sort);
-//    }
+    public void validateRestaurant(Restaurant restaurant) {
+        if (restaurant.getName() == null || restaurant.getName().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Restaurant name is required");
+        }
+        if (restaurant.getZipcode() == null || restaurant.getZipcode().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Restaurant zipcode is required");
+        }
+        validateZipcode(restaurant.getZipcode());
+
+        Optional<Restaurant> existingRestaurant = restaurantRepository.findRestaurantsByNameAndZipcode(restaurant.getName(), restaurant.getZipcode());
+        if (existingRestaurant.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Restaurant already exists");
+        }
+    }
 
 }

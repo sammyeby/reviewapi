@@ -1,54 +1,42 @@
 package com.samsoft.reviewapi.controller;
 
-import com.samsoft.reviewapi.entities.Review;
+import com.samsoft.reviewapi.entities.ReviewAction;
 import com.samsoft.reviewapi.service.ReviewService;
 import com.samsoft.reviewapi.util.ErrorResponseUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+
+@RequestMapping("/admin")
 @RestController
-@RequestMapping("/reviews")
-public class ReviewController {
+public class AdminController {
     private final ReviewService reviewService;
 
-    public ReviewController(ReviewService reviewService) {
+    public AdminController(ReviewService reviewService) {
         this.reviewService = reviewService;
     }
 
-    @PostMapping
-    public ResponseEntity<?> addUserReview(@RequestBody Review review) {
+    @GetMapping("/reviews")
+    public ResponseEntity<?> getReviewsByStatus(@RequestParam String status) {
         try {
-            reviewService.addUserReview(review);
+            return ResponseEntity.ok(reviewService.getReviewsByStatus(status));
+        } catch (ResponseStatusException e) {
+            return ErrorResponseUtil.createErrorResponse(e.getMessage(), e.getStatusCode());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PutMapping("/reviews/{reviewId}")
+    public ResponseEntity<?> performReviewAction(@PathVariable Long reviewId, @RequestBody ReviewAction reviewAction) {
+        try {
+            reviewService.performReviewAction(reviewId, reviewAction);
             return ResponseEntity.ok().build();
         } catch (ResponseStatusException e) {
             return ErrorResponseUtil.createErrorResponse(e.getMessage(), e.getStatusCode());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
-
         }
     }
-
-    @GetMapping
-    public ResponseEntity<?> getAllUserReviews() {
-        try {
-            return ResponseEntity.ok(reviewService.getAllReviews());
-        } catch (ResponseStatusException e) {
-            return ErrorResponseUtil.createErrorResponse(e.getMessage(), e.getStatusCode());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getUserReviewById(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(reviewService.getReviewById(id));
-        } catch (ResponseStatusException e) {
-            return ErrorResponseUtil.createErrorResponse(e.getMessage(), e.getStatusCode());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
 }
